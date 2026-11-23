@@ -464,6 +464,8 @@ def generer_rapport_html(cfg : SessionConfig , inclure_topomap=True):
     </html>
     """
 
+
+    '''
     if inclure_topomap:
         filename_path = os.path.join(cfg.temp_dir_img, "rapport_eeg.html")
         with open(filename_path, "w", encoding="utf-8") as f:
@@ -474,6 +476,13 @@ def generer_rapport_html(cfg : SessionConfig , inclure_topomap=True):
         filename_path = os.path.join(cfg.temp_dir_img, "rapport_eeg.pdf")
         HTML(string=html_content, base_url=cfg.temp_dir_img).write_pdf(filename_path)
         print(f"✅ Rapport PDF généré avec succès ")
+    '''
+    filename_path = os.path.join(cfg.temp_dir_img, "rapport_eeg.html")
+    with open(filename_path, "w", encoding="utf-8") as f:
+        f.write(html_content)
 
-
+    # Génération du PDF via WeasyPrint avec base_url pointant sur le dossier des images
+    filename_path = os.path.join(cfg.temp_dir_img, "rapport_eeg.pdf")
+    HTML(string=html_content, base_url=cfg.temp_dir_img).write_pdf(filename_path)
+    print(f"✅ Rapport PDF généré avec succès ")
 

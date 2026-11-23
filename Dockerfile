@@ -20,4 +20,4 @@ COPY . /app/
 EXPOSE 8021
 
 # Commande de lancement de l'application 
-CMD ["python","app.py"]
+CMD ["sh", "-c", "gunicorn -w 1 -b 0.0.0.0:${PORT:-8021} --timeout 180 --max-requests 1 --max-requests-jitter 1 app:app"]

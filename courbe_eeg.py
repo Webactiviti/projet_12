@@ -22,7 +22,7 @@ def traiter_et_sauvegarder_courbe_eeg(db_conn, id_position, chan_label, raw_sign
     time_axis = np.linspace(0, len(raw_signal) / sfreq, len(raw_signal))
 
     # 2. Tracé du graphique temporel
-    fig, ax = plt.subplots(figsize=(8, 3.5), dpi=250)
+    fig, ax = plt.subplots(figsize=(8, 3.5), dpi=150)
 
     ax.set_ylim(-100,100)
     

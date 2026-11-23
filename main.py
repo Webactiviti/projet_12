@@ -3,13 +3,15 @@ import pyxdf
 import duckdb
 import numpy as np
 
+import jax.numpy as jnp
+from lib import bandpass_filter, notch_filter, wavelet_transform
 
 from fft import traiter_et_sauvegarder_fft
 from sca import traiter_et_sauvegarder_sca
 from energy import traiter_et_sauvegarder_energie
 from EEG_result import calculer_et_sauvegarder_resultats
-from topomap import generer_et_sauvegarder_topomaps
-from lib import bandpass_filter, notch_filter
+#from topomap import generer_et_sauvegarder_topomaps
+
 from courbe_eeg import traiter_et_sauvegarder_courbe_eeg  
 
 from head import generer_et_sauvegarder_tete
@@ -271,10 +273,12 @@ def main(cfg : SessionConfig ) :
     n_channels = eeg_data_raw.shape[1]
     print(f"Traitement de {n_channels} canaux EEG...\n")
 
+
+
     # --- Préparation du filtrage global pour les topomaps (shape: n_channels, n_samples) ---
-    eeg_data_filtered_all = eeg_data_raw[start_sample:].T
-    eeg_data_filtered_all = bandpass_filter(eeg_data_filtered_all, sfreq)
-    eeg_data_filtered_all = notch_filter(eeg_data_filtered_all, sfreq)
+    #eeg_data_filtered_all = eeg_data_raw[start_sample:].T
+    #eeg_data_filtered_all = bandpass_filter(eeg_data_filtered_all, sfreq)
+    #eeg_data_filtered_all = notch_filter(eeg_data_filtered_all, sfreq)
 
 
 
@@ -282,7 +286,8 @@ def main(cfg : SessionConfig ) :
     conn.execute("INSERT INTO identifiant (nom_identifiant) VALUES (?)", (cfg.name_session,))
 
     
-
+    freqs_jax = jnp.linspace(1, 30, 60)
+    freqs_np = np.asarray(freqs_jax, dtype=np.float32)
 
     # Boucle canal par canal pour les métriques, FFT, SCA et Energy
     for chan_idx in range(n_channels):
@@ -309,23 +314,35 @@ def main(cfg : SessionConfig ) :
         # 3. Traitement FFT
         traiter_et_sauvegarder_fft(conn, id_position, chan_label, raw_signal, sfreq, cfg)
 
-        # 4. Traitement Scalogramme
-        traiter_et_sauvegarder_sca(conn, id_position, chan_label, raw_signal, sfreq, marker_times_rel, marker_labels, cfg)
+        # 4. Calcul unique du scalogramme pour SCA + Énergie
+        filtered_chan = notch_filter(bandpass_filter(raw_signal, sfreq), sfreq)
+        sig_jax = jnp.asarray(filtered_chan, dtype=jnp.float32)
+        scalo_jax = wavelet_transform(sig_jax, freqs_jax, 33, sfreq)
+        scalogram_np = np.asarray(scalo_jax)
+        del sig_jax, scalo_jax, filtered_chan
 
-        # 5. Traitement Énergie Relative (Theta, Alpha, Beta)
-        traiter_et_sauvegarder_energie(conn, id_position, chan_label, raw_signal, sfreq, marker_times_rel, marker_labels, cfg)
+        # 5. Traitement Scalogramme
+        traiter_et_sauvegarder_sca(conn, id_position, chan_label, scalogram_np, freqs_np, sfreq, marker_times_rel, marker_labels, cfg)
 
-        # 6. Traitement Courbe EEG 
+        # 6. Traitement Énergie Relative
+        traiter_et_sauvegarder_energie(conn, id_position, chan_label, scalogram_np, freqs_np, sfreq, marker_times_rel, marker_labels, cfg)
+
+        del scalogram_np
+
+        # 7. Traitement Courbe EEG 
         traiter_et_sauvegarder_courbe_eeg(conn, id_position, chan_label, raw_signal, sfreq, marker_times_rel, marker_labels, cfg)
 
 
-
+        del raw_signal
     
     # --- 7. Génération globale des Topomaps (HORS de la boucle des canaux) ---
     # On associe par défaut les topomaps au premier ID de position (ou un identifiant global de session)
-    
+    '''
     id_position_topo = 1 
     
+
+
+
     generer_et_sauvegarder_topomaps(
         db_conn=conn,
         eeg_data_filtered=eeg_data_filtered_all,
@@ -336,7 +353,7 @@ def main(cfg : SessionConfig ) :
         cfg = cfg
     )
     
-    
+    '''
 
     # Génération de l'image de la tête
     
@@ -368,11 +385,21 @@ def main(cfg : SessionConfig ) :
 
     generer_rapport_html(cfg =cfg , inclure_topomap = False)
 
-    generer_rapport_html(cfg =cfg)
+    #generer_rapport_html(cfg =cfg)
 
-    
+    for nom_var in (
+        "streams",
+        "header",
+        "eeg_stream",
+        "marker_streams",
+        "eeg_data_raw",
+        "eeg_data_filtered_all",
+        "raw_signal",
+        "df_summary",
+    ):
 
-
+        if nom_var in locals():
+            del locals()[nom_var]
 
 if __name__ == "__main__":
 
