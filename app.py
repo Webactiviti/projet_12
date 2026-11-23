@@ -63,4 +63,7 @@ def receive_xdf(session_id):
             rep_session = Path(cfg.temp_session_id)
             if rep_session.exists() and rep_session.is_dir():
                 shutil.rmtree(rep_session, ignore_errors=True)
-        
+
+if __name__ == '__main__':
+    # Lancement du serveur sur toutes les interfaces du conteneur, port 8021
+    app.run(host='0.0.0.0', port=8021)       

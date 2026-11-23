@@ -19,5 +19,9 @@ COPY . /app/
 # Exposition du port FastAPI
 EXPOSE 8021
 
+ENV OPENBLAS_NUM_THREADS=1 \
+    OMP_NUM_THREADS=1
+
 # Commande de lancement de l'application 
-CMD ["sh", "-c", "gunicorn -w 1 -b 0.0.0.0:${PORT:-8021} --timeout 180 --max-requests 1 --max-requests-jitter 1 app:app"]
+#CMD ["sh", "-c", "gunicorn -w 1 -b 0.0.0.0:${PORT:-8021} --timeout 180 --max-requests 2 --max-requests-jitter 1 app:app"]
+CMD ["python" , "app.py"]
